@@ -240,9 +240,19 @@ cowbuilder_init() {
   echo "*** Listing pbuilder configuration file as reference: ***"
   cat "$pbuilderrc"
 
+  if [ "$distribution"X = lucidX ]; then
+     if [ "$architecture"X = i386X ]; then
+       DPREFIX='setarch i386 --uname-2.6'
+     else
+       DPREFIX="setarch `uname -m` --uname-2.6"
+     fi
+  else
+    DPREFIX=""
+  fi
+
   if [ ! -d "${COWBUILDER_BASE}" ]; then
     echo "*** Creating cowbuilder base $COWBUILDER_BASE for arch $arch and distribution $COWBUILDER_DIST ***"
-    sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
+    $DPREFIX sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
       cowbuilder --create --basepath "${COWBUILDER_BASE}" --distribution "${COWBUILDER_DIST}" \
          --debootstrapopts --arch --debootstrapopts "$arch" \
          --debootstrapopts --variant=buildd --configfile="${pbuilderrc}" \
@@ -250,7 +260,7 @@ cowbuilder_init() {
     [ $? -eq 0 ] || bailout 1 "Error: Failed to create cowbuilder base ${COWBUILDER_BASE}."
   else
     echo "*** Updating cowbuilder cow base ***"
-    sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
+    $DPREFIX sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
       cowbuilder --update --basepath "${COWBUILDER_BASE}" --configfile="${pbuilderrc}"
     [ $? -eq 0 ] || bailout 1 "Error: Failed to update cowbuilder base ${COWBUILDER_BASE}."
   fi
@@ -410,27 +420,21 @@ EOF
     fi
   fi
 
-  case "$architecture" in
-    i386)
-      linux32 sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
-        cowbuilder --buildresult "$WORKSPACE"/binaries/ \
-        --build $sourcefile \
-        --basepath "${COWBUILDER_BASE}" --debbuildopts "${DEBBUILDOPTS:-}" \
-        --hookdir "${PBUILDER_HOOKDIR}" --bindmounts "$BINDMOUNTS" --configfile="${pbuilderrc}"
-      [ $? -eq 0 ] || bailout 1 "Error: Failed to build with cowbuilder."
-      ;;
-    amd64|all|*)
-      sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
-        cowbuilder --buildresult "$WORKSPACE"/binaries/ \
-        --build $sourcefile \
-        --basepath "${COWBUILDER_BASE}" --debbuildopts "${DEBBUILDOPTS:-}" \
-        --hookdir "${PBUILDER_HOOKDIR}" --bindmounts "$BINDMOUNTS" --configfile="${pbuilderrc}"
-      [ $? -eq 0 ] || bailout 1 "Error: Failed to build with cowbuilder."
-      ;;
-    *)
-      bailout 1 "Error: Unsupported architecture: $architecture"
-      ;;
-  esac
+  if [ "$architecture"X = i386X ]; then
+    DPREFIX='setarch i386'
+  else
+    DPREFIX="setarch `uname -m`"
+  fi
+  if [ "$distribution"X = lucidX ]; then
+    DPREFIX="$DPREFIX --uname-2.6"
+  fi
+
+  $DPREFIX sudo DIST="${distribution:-}" ARCH="${architecture:-}" ${ADT:+ADT=$ADT} \
+    cowbuilder --buildresult "$WORKSPACE"/binaries/ \
+    --build $sourcefile \
+    --basepath "${COWBUILDER_BASE}" --debbuildopts "${DEBBUILDOPTS:-}" \
+    --hookdir "${PBUILDER_HOOKDIR}" --bindmounts "$BINDMOUNTS" --configfile="${pbuilderrc}"
+  [ $? -eq 0 ] || bailout 1 "Error: Failed to build with cowbuilder."
 
   [ -n "${pbuilderrc:-}" ] && rm -f "$pbuilderrc"
 }
