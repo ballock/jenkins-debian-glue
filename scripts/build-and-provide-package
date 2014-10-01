@@ -242,9 +242,9 @@ cowbuilder_init() {
 
   if [ "$distribution"X = lucidX ]; then
      if [ "$architecture"X = i386X ]; then
-       DPREFIX='setarch i386 --uname-2.6'
+       DPREFIX='linux32 --uname-2.6'
      else
-       DPREFIX="setarch `uname -m` --uname-2.6"
+       DPREFIX="linux64 --uname-2.6"
      fi
   else
     DPREFIX=""
@@ -421,9 +421,9 @@ EOF
   fi
 
   if [ "$architecture"X = i386X ]; then
-    DPREFIX='setarch i386'
+    DPREFIX='linux32'
   else
-    DPREFIX="setarch `uname -m`"
+    DPREFIX="linux64"
   fi
   if [ "$distribution"X = lucidX ]; then
     DPREFIX="$DPREFIX --uname-2.6"
